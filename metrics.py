@@ -104,7 +104,11 @@ class EmpiricalMeasureMetric(Metric):
         ax.set_ylim(0, y_max*1.1)
         plt.ylabel("Empirical Measure")
         plt.xlabel("x")
+
+        # anim.save('empirical_measure.mp4', writer='ffmpeg', fps=30)
+
         plt.show()
+        plt.close()
 
 # =========================================
 # Position Profile
@@ -151,11 +155,15 @@ class PositionProfileMetric(Metric):
             timestamp_text.set_text(f'Timestamp: {self.timestamps[frame]}')
             return scatter, timestamp_text
 
-        ani = FuncAnimation(fig, update1, frames=len(self.values), init_func=init1, interval=10)
+        anim = FuncAnimation(fig, update1, frames=len(self.values), init_func=init1, interval=10)
         plt.grid()
         plt.ylabel("Position Profile")
         plt.xlabel("x")
+
+        # anim.save('position_profile.mp4', writer='ffmpeg', fps=30)
+
         plt.show()
+        plt.close()
 
 
 # TODO

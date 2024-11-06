@@ -1,6 +1,6 @@
 # Exclusion Process Simulator
 
-This repo contains a simulator for the symmetric exclusion process on the discrete torus (0, 1, ..., n-1) with a slight modification that, at site $0$, the clock rate is
+This repo contains a simulator for the symmetric exclusion process on the discrete torus $(0, 1, ..., n-1)$ with a slight modification that, at site $0$, the clock rate is
 
 $$\frac{\alpha}{n^\beta}$$
 
