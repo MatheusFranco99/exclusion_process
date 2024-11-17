@@ -81,8 +81,6 @@ class ExclusionProcess:
 
         # Update current time
         assert self.current_time[None] <= min_value
-        if self.current_time[None] > min_value:
-            print("Cant be")
         self.current_time[None] = min_value
 
         # Determine random jump direction (left or right) and destination
@@ -109,7 +107,7 @@ class ExclusionProcess:
 @ti.data_oriented
 class ExclusionProcessWithMetric(ExclusionProcess):
     """ Exclusion Process with metrics """
-    def __init__(self, particles, alpha, beta, num_metric_points: int):
+    def __init__(self, particles: list[int], alpha: float, beta: float, num_metric_points: int):
         super().__init__(particles, alpha, beta)
         self.metric_values = ti.field(ti.f32, shape=(num_metric_points,))  # Discretized t in [0, 1]
         self.metric_x_points = np.linspace(0, 1, num_metric_points)  # Corresponding t values

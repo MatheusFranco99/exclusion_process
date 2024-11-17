@@ -4,44 +4,29 @@ import argparse
 import random
 import taichi as ti
 
-from visualization import visualize_empirical_measure, visualize_particles
+from visualization import (ExecutionConfig, visualize_particles_and_metric_combined, visualize_simulation)
 from exclusion_process import ExclusionProcessWithMetric
 
+# Plot type
+PARTICLES = "particles"
+MEASURE = "measure"
+ALL = "all"
+COMBINED = "combined"
+
 # Initialize Taichi
-ti.init(arch=ti.gpu)
+ti.init(arch=ti.cpu)
 
 # Execution argumets
 parser = argparse.ArgumentParser(description="Exclusion process visualization.")
 parser.add_argument("--n", type=int, required=True, help="Torus size.")
-parser.add_argument("--d", type=float, required=True, help="Density of particles.")
+parser.add_argument("--d", type=float, required=True, help="Density of particles (e.g., 0.1 for 10 percent).")
 parser.add_argument("--alpha", type=float, required=True, help="Alpha value.")
 parser.add_argument("--beta", type=float, required=True, help="Beta value.")
 parser.add_argument("--steps", type=int, required=True, help="Number of steps.")
-subparsers = parser.add_subparsers(dest="command", required=True)
-
-# Subcommand: show particles
-show_particles_parser = subparsers.add_parser("show_particles", help="Show particles.")
-
-# Subcommand: show complete metric
-show_empirical_measure_complete = subparsers.add_parser("show_empirical_measure_complete", help="Show empirical measure visualization.")
-
-# Subcommand: show metric with jumps
-show_empirical_measure_speed_up = subparsers.add_parser("show_empirical_measure_speed_up", help="Show empirical measure visualization with skipped states for speed-up.")
-show_empirical_measure_speed_up.add_argument("--skipped_steps", type=int, required=True, help="Number of steps to skip for speed-up.")
-
-
-
-def show_particles(exclusion_process: ExclusionProcessWithMetric, steps: int):
-    """ Run particle visualization """
-    visualize_particles(exclusion_process, num_steps = steps)
-
-def show_complete_metric(exclusion_process: ExclusionProcessWithMetric, steps: int):
-    """ Run particle visualization """
-    visualize_empirical_measure(exclusion_process, steps=steps, state_skip_for_speed_up = 0)
-
-def show_metric_with_jumps(exclusion_process: ExclusionProcessWithMetric, steps: int, state_skip: int):
-    """ Run particle visualization """
-    visualize_empirical_measure(exclusion_process, steps=steps, state_skip_for_speed_up = state_skip)
+parser.add_argument("--skipped_steps", type=int, default = 0, required=False, help="Number of steps to skip for speed-up.")
+parser.add_argument("--out", type=str, required=False, help="Output directory for video.")
+parser.add_argument("--delay", type=float, required=False, help="Time delay between iterations for better live visualization.")
+parser.add_argument("--plot", type=str, required=True, help=f"Plot to be done: {PARTICLES},{MEASURE},{ALL},{COMBINED}.")
 
 
 def main():
@@ -59,13 +44,23 @@ def main():
     exclusion_process = ExclusionProcessWithMetric(particles = particles, alpha = args.alpha, beta = args.beta, num_metric_points = args.n * 2)
     exclusion_process.setup()
 
-    # Execute appropriate command
-    if args.command == "show_particles":
-        show_particles(exclusion_process, args.steps)
-    elif args.command == "show_empirical_measure_complete":
-        show_complete_metric(exclusion_process, args.steps)
-    elif args.command == "show_empirical_measure_speed_up":
-        show_metric_with_jumps(exclusion_process, args.steps, args.skipped_steps)
+    output_dir = "./output/" + args.out
+
+    ec = ExecutionConfig(
+        exclusion_process = exclusion_process,
+        steps = args.steps,
+        state_skip_for_speed_up = args.skipped_steps,
+        delay = args.delay,
+        output_dir=output_dir)
+
+    if args.plot == COMBINED:
+        visualize_particles_and_metric_combined(ec)
+    elif args.plot == PARTICLES:
+        visualize_simulation(ec, show_particles = True, show_measure = False)
+    elif args.plot == MEASURE:
+        visualize_simulation(ec, show_particles = False, show_measure = True)
+    elif args.plot == ALL:
+        visualize_simulation(ec, show_particles = True, show_measure = True)
 
 if __name__ == "__main__":
     main()
