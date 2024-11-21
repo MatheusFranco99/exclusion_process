@@ -103,7 +103,7 @@ class Simulator:
         while current_time < self.config.max_time:
             self.system.process_next_event()
             new_time = self.system.current_time
-            self.add_repeted_metrics(current_time, new_time, time_step)
+            # self.add_repeted_metrics(current_time, new_time, time_step)
             current_time = new_time
             self.update_metrics(self.system)
 

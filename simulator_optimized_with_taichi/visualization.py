@@ -56,6 +56,14 @@ def add_grid(gui, x0, x1, y0, y1):
         gui.line(begin=(x0, y_pos), end=(x1, y_pos), radius=1, color=0xDDDDDD)
 
 def add_metric(gui, x, y):
+    # Draw the fill between the line and the x-axis
+    for i in range(len(x) - 1):
+        x0, y0 = x[i], y[i]
+        x1, y1 = x[i + 1], y[i + 1]
+        gui.triangle((x0, y0), (x1, y1), (x1, 0.5), color = 0x3D3BF3)
+        gui.triangle((x0, y0), (x0, 0.5), (x1, 0.5), color=0x3D3BF3)
+
+
     for i in range(len(x) - 1):
         gui.line(begin=(x[i], y[i]),
                     end=(x[i + 1], y[i + 1]),

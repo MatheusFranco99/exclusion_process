@@ -72,7 +72,7 @@ class EmpiricalMeasureMetric(Metric):
         """ Animate the empirical measure through time """
 
         # Define the x values from 0 to 1
-        x = np.linspace(0, 1, 100)
+        x = np.linspace(0, 1, torus_size)
 
         # Set up the figure and axis
         fig, ax = plt.subplots(figsize = (15,8))
@@ -105,9 +105,9 @@ class EmpiricalMeasureMetric(Metric):
         plt.ylabel("Empirical Measure")
         plt.xlabel("x")
 
-        # anim.save('empirical_measure.mp4', writer='ffmpeg', fps=30)
+        anim.save('empirical_measure.mp4', writer='ffmpeg', fps=30)
 
-        plt.show()
+        # plt.show()
         plt.close()
 
 # =========================================
@@ -155,14 +155,14 @@ class PositionProfileMetric(Metric):
             timestamp_text.set_text(f'Timestamp: {self.timestamps[frame]}')
             return scatter, timestamp_text
 
-        anim = FuncAnimation(fig, update1, frames=len(self.values), init_func=init1, interval=10)
-        plt.grid()
+        anim = FuncAnimation(fig, update1, frames=len(self.values), init_func=init1, interval=1)
+        # plt.grid()
         plt.ylabel("Position Profile")
         plt.xlabel("x")
 
-        # anim.save('position_profile.mp4', writer='ffmpeg', fps=30)
+        anim.save('position_profile.mp4', writer='ffmpeg', fps=30)
 
-        plt.show()
+        # plt.show()
         plt.close()
 
 

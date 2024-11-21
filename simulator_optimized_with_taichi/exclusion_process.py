@@ -1,4 +1,5 @@
 """ ExclusionProcess implementation """
+
 import numpy as np
 import taichi as ti
 
@@ -7,15 +8,16 @@ import taichi as ti
 class ExclusionProcess:
     """ Exclusion process """
 
-    def __init__(self, particles: list[int], alpha: float, beta: float):
+    def __init__(self, particles: list[int], alpha: float, beta: float, max_particles_per_site: int):
         self.size = len(particles)
         self.alpha = alpha
         self.beta = beta
+        self.max_particles_per_site = max_particles_per_site
 
         # Initialize the binary field `x` with 1 (occupied site) or 0 (empty)
         self.x = ti.field(ti.i32, shape=self.size)
-        for i, has_particle in enumerate(particles):
-            self.x[i] = has_particle
+        for i, num_particles_at_site in enumerate(particles):
+            self.x[i] = num_particles_at_site
 
         # Initialize a list of clocks for each position
         self.clocks = ti.field(ti.f32, shape=self.size)
@@ -34,6 +36,8 @@ class ExclusionProcess:
         # curr_nanoseconds = now.timestamp() * 1_000_000_000
         # seed_for_rng = int(curr_nanoseconds % 1000)
         # self.rng = np.random.default_rng(seed_for_rng)
+
+        self.calls_per_site = ti.field(ti.i64, shape=self.size)
 
     @ti.kernel
     def setup(self):
@@ -54,7 +58,9 @@ class ExclusionProcess:
         if position == 0:
             ans = -1/(self.exp_parameter_at_0[None]) * ti.log(ti.random(ti.f32))
         else:
-            ans = -1 * ti.log(ti.random(float))
+            num_particles_at_site = self.x[position]
+            num_particles_at_site = 1
+            ans = -1/(num_particles_at_site) * ti.log(ti.random(float))
         return ans
 
     @ti.kernel
@@ -77,11 +83,13 @@ class ExclusionProcess:
 
         # Sanity checks
         assert selected_pos != -1 # Should find a value
-        assert self.x[selected_pos] == 1 # Should have a particle at the selected site
+        assert self.x[selected_pos] >= 1 # Should have a particle at the selected site
 
         # Update current time
         assert self.current_time[None] <= min_value
         self.current_time[None] = min_value
+
+        self.calls_per_site[selected_pos] += 1
 
         # Determine random jump direction (left or right) and destination
         direction = ti.random()
@@ -92,13 +100,17 @@ class ExclusionProcess:
             new_pos = (selected_pos + 1) % self.x.shape[0]
 
         # Only move the particle if the destination is empty
-        if self.x[new_pos] == 0:
+        if self.x[new_pos] < self.max_particles_per_site:
             # Move the particle
-            self.x[selected_pos] = 0
-            self.x[new_pos] = 1
+            self.x[selected_pos] -= 1
+            self.x[new_pos] += 1
 
             # Update clocks
-            self.clocks[selected_pos] = -1
+            if self.x[selected_pos] == 0:
+                self.clocks[selected_pos] = -1
+            else:
+                self.clocks[selected_pos] = self.current_time[None] + self.get_exponential(position=selected_pos)
+
             self.clocks[new_pos] = self.current_time[None] + self.get_exponential(position=new_pos)
         else:
             # If couldn't jump, restarts the clock at the selected position
@@ -107,19 +119,16 @@ class ExclusionProcess:
 @ti.data_oriented
 class ExclusionProcessWithMetric(ExclusionProcess):
     """ Exclusion Process with metrics """
-    def __init__(self, particles: list[int], alpha: float, beta: float, num_metric_points: int):
-        super().__init__(particles, alpha, beta)
-        self.metric_values = ti.field(ti.f32, shape=(num_metric_points,))  # Discretized t in [0, 1]
-        self.metric_x_points = np.linspace(0, 1, num_metric_points)  # Corresponding t values
+    def __init__(self, particles: list[int], alpha: float, beta: float, max_particles_per_site: int):
+        super().__init__(particles, alpha, beta, max_particles_per_site)
+
+        num_particles: int = len(particles)
+        self.metric_x_points = np.array([i/num_particles for i in range(num_particles)]) # Discretized t in [0, 1]
+        self.metric_values = ti.field(ti.f32, shape=(num_particles,))  # Discretized t in [0, 1]
 
     @ti.kernel
     def compute_metric(self):
         """Compute the metric for all metric x points"""
         n = self.size
-        for k in range(self.metric_values.shape[0]):
-            x_point = k / self.metric_values.shape[0]
-            total = 0.0
-            for i in range(n):
-                if self.x[i] == 1 and x_point >= (i / n):  # Particle at position i contributes with 1 if x >= i/n
-                    total += 1.0
-            self.metric_values[k] = total / n  # Normalize by dividing by n
+        for k in range(len(self.metric_x_points)):
+            self.metric_values[k] = self.x[k]
